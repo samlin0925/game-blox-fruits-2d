@@ -1,0 +1,65 @@
+{
+  "codes": [
+    {
+      "code": "GODMODE",
+      "effect": "invincibility",
+      "duration": 30,
+      "description": "無敵 30 秒",
+      "rarity": "legendary",
+      "max_uses_per_session": 1,
+      "active": true
+    },
+    {
+      "code": "MONEYRAIN",
+      "effect": "add_currency",
+      "amount": 10000,
+      "description": "獲得 10,000 金幣",
+      "rarity": "rare",
+      "max_uses_per_session": 3,
+      "active": true
+    },
+    {
+      "code": "GACHA10",
+      "effect": "free_gacha",
+      "count": 10,
+      "description": "免費抽取 10 次果實",
+      "rarity": "epic",
+      "max_uses_per_session": 1,
+      "active": true
+    },
+    {
+      "code": "LEVELUP",
+      "effect": "gain_experience",
+      "amount": 50000,
+      "description": "獲得 50,000 經驗值",
+      "rarity": "rare",
+      "max_uses_per_session": 2,
+      "active": true
+    },
+    {
+      "code": "ALLFRUITS",
+      "effect": "unlock_all_fruits",
+      "description": "解鎖所有果實碎片各 10 片",
+      "rarity": "legendary",
+      "max_uses_per_session": 1,
+      "active": true
+    },
+    {
+      "code": "MAXLEVEL",
+      "effect": "set_level",
+      "level": 50,
+      "description": "直接升到 50 級",
+      "rarity": "legendary",
+      "max_uses_per_session": 1,
+      "active": true
+    },
+    {
+      "code": "KILLAURA",
+      "effect": "kill_all_enemies",
+      "description": "消滅畫面所有敵人",
+      "rarity": "epic",
+      "max_uses_per_session": 3,
+      "active": true
+    }
+  ]
+}

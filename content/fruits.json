@@ -1,0 +1,106 @@
+{
+  "fruits": [
+    {
+      "id": "rubber",
+      "name": "橡膠果實",
+      "rarity": "common",
+      "weight": 70,
+      "color": [220, 50, 50],
+      "passive": "+20% 迴避率",
+      "fragments_required": 10,
+      "character_color": [30, 144, 255],
+      "skill": {
+        "name": "橡膠子彈亂打",
+        "description": "連續射出 5 發橡膠子彈",
+        "damage_multiplier": 0.6,
+        "hit_count": 5,
+        "aoe_radius": 0,
+        "cooldown": 3.0,
+        "projectile_speed": 500,
+        "projectile_color": [255, 120, 120]
+      }
+    },
+    {
+      "id": "flame",
+      "name": "火焰果實",
+      "rarity": "rare",
+      "weight": 25,
+      "color": [255, 100, 20],
+      "passive": "+15% 全體傷害",
+      "fragments_required": 10,
+      "character_color": [255, 165, 0],
+      "skill": {
+        "name": "火焰大地獄",
+        "description": "釋放火焰爆炸，範圍內所有敵人受到大量傷害",
+        "damage_multiplier": 2.5,
+        "hit_count": 1,
+        "aoe_radius": 220,
+        "cooldown": 6.0,
+        "projectile_speed": 0,
+        "projectile_color": [255, 80, 0]
+      }
+    },
+    {
+      "id": "ice",
+      "name": "冰凍果實",
+      "rarity": "rare",
+      "weight": 20,
+      "color": [100, 200, 255],
+      "passive": "攻擊附帶減速效果",
+      "fragments_required": 10,
+      "character_color": [150, 230, 255],
+      "skill": {
+        "name": "冰河時代",
+        "description": "凍結範圍內所有敵人 3 秒",
+        "damage_multiplier": 1.5,
+        "hit_count": 1,
+        "aoe_radius": 250,
+        "cooldown": 7.0,
+        "projectile_speed": 0,
+        "projectile_color": [150, 230, 255],
+        "freeze_duration": 3.0
+      }
+    },
+    {
+      "id": "dragon",
+      "name": "龍龍果實",
+      "rarity": "legendary",
+      "weight": 5,
+      "color": [255, 215, 0],
+      "passive": "+50% 攻擊力",
+      "fragments_required": 10,
+      "character_color": [255, 215, 0],
+      "skill": {
+        "name": "龍息吐息",
+        "description": "射出穿透光線，貫穿所有敵人",
+        "damage_multiplier": 4.0,
+        "hit_count": 1,
+        "aoe_radius": 0,
+        "cooldown": 8.0,
+        "projectile_speed": 700,
+        "projectile_color": [255, 215, 0],
+        "piercing": true
+      }
+    },
+    {
+      "id": "leopard",
+      "name": "豹豹果實",
+      "rarity": "legendary",
+      "weight": 5,
+      "color": [180, 120, 60],
+      "passive": "+40% 暴擊率",
+      "fragments_required": 10,
+      "character_color": [200, 150, 80],
+      "skill": {
+        "name": "獸王獠牙",
+        "description": "瞬間衝刺攻擊，造成多段傷害",
+        "damage_multiplier": 1.8,
+        "hit_count": 4,
+        "aoe_radius": 80,
+        "cooldown": 5.0,
+        "projectile_speed": 900,
+        "projectile_color": [255, 180, 80]
+      }
+    }
+  ]
+}

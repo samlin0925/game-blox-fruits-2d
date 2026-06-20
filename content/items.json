@@ -1,0 +1,40 @@
+{
+  "items": [
+    {
+      "id": "health_potion",
+      "name": "生命藥水",
+      "type": "consumable",
+      "effect": "heal",
+      "value": 100,
+      "color": [255, 80, 80],
+      "description": "恢復 100 HP"
+    },
+    {
+      "id": "exp_scroll",
+      "name": "經驗卷軸",
+      "type": "consumable",
+      "effect": "experience",
+      "value": 500,
+      "color": [150, 255, 100],
+      "description": "獲得 500 EXP"
+    },
+    {
+      "id": "gold_bag",
+      "name": "金幣袋",
+      "type": "consumable",
+      "effect": "gold",
+      "value": 200,
+      "color": [255, 215, 0],
+      "description": "獲得 200 金幣"
+    },
+    {
+      "id": "fruit_fragment",
+      "name": "果實碎片",
+      "type": "fragment",
+      "effect": "fragment",
+      "value": 1,
+      "color": [180, 120, 220],
+      "description": "收集 10 片可覺醒果實"
+    }
+  ]
+}

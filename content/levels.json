@@ -1,0 +1,59 @@
+{
+  "exp_formula": "base * level ^ 1.5",
+  "exp_base": 100,
+  "stat_per_level": {
+    "attack": 3,
+    "defense": 1,
+    "health": 15
+  },
+  "milestones": [
+    {
+      "level": 10,
+      "name": "新手畢業",
+      "reward_exp": 1000,
+      "reward_gold": 200,
+      "reward_title": "新手戰士",
+      "vfx": "gold_shine",
+      "camera_shake": {"intensity": 8, "duration": 0.5}
+    },
+    {
+      "level": 20,
+      "name": "進階戰士",
+      "reward_exp": 3000,
+      "reward_gold": 500,
+      "reward_title": "赤焰戰士",
+      "vfx": "flame_ring",
+      "free_gacha": 1,
+      "camera_shake": {"intensity": 12, "duration": 0.6}
+    },
+    {
+      "level": 30,
+      "name": "強者降臨",
+      "reward_exp": 8000,
+      "reward_gold": 1000,
+      "reward_title": "傳說戰士",
+      "vfx": "crown_effect",
+      "free_gacha": 3,
+      "camera_shake": {"intensity": 15, "duration": 0.8}
+    },
+    {
+      "level": 50,
+      "name": "傳奇開始",
+      "reward_exp": 20000,
+      "reward_gold": 3000,
+      "reward_title": "傳奇英雄",
+      "vfx": "rainbow_fullscreen",
+      "free_gacha": 5,
+      "camera_shake": {"intensity": 20, "duration": 1.0}
+    },
+    {
+      "level": 99,
+      "name": "終極之力",
+      "reward_exp": 99999,
+      "reward_gold": 9999,
+      "reward_title": "不滅之王",
+      "vfx": "ultimate",
+      "camera_shake": {"intensity": 30, "duration": 2.0}
+    }
+  ]
+}

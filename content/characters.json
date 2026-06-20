@@ -1,0 +1,119 @@
+{
+  "characters": [
+    {
+      "id": "luffy",
+      "name": "草帽魯夫",
+      "title": "海賊王候補",
+      "faction": "pirate",
+      "description": "橡皮果實能力者，夢想成為海賊王",
+      "body_color": [220, 80, 50],
+      "skin_color": [240, 200, 160],
+      "hair_color": [30, 20, 10],
+      "hat_color": [220, 180, 60],
+      "detail_color": [40, 60, 120],
+      "has_hat": true,
+      "has_scar": true,
+      "weapon": "fist",
+      "stat_bonus": {
+        "max_health": 50,
+        "base_attack": 0,
+        "defense": 5,
+        "crit_rate": 5,
+        "speed": 0
+      },
+      "passive": "橡皮之軀：受傷時30%機率免疫傷害"
+    },
+    {
+      "id": "zoro",
+      "name": "羅羅亞‧索隆",
+      "title": "世界第一劍客候補",
+      "faction": "pirate",
+      "description": "三刀流劍士，天生方向感奇差",
+      "body_color": [50, 80, 50],
+      "skin_color": [240, 200, 160],
+      "hair_color": [60, 140, 60],
+      "hat_color": [200, 200, 180],
+      "detail_color": [180, 30, 30],
+      "has_hat": false,
+      "has_scar": false,
+      "weapon": "sword",
+      "stat_bonus": {
+        "max_health": 20,
+        "base_attack": 8,
+        "defense": 3,
+        "crit_rate": 15,
+        "speed": 0
+      },
+      "passive": "三刀流：暴擊傷害額外 +50%"
+    },
+    {
+      "id": "nami",
+      "name": "娜美",
+      "title": "航海士",
+      "faction": "pirate",
+      "description": "天才航海士，操控天氣棒",
+      "body_color": [255, 140, 30],
+      "skin_color": [240, 200, 160],
+      "hair_color": [255, 165, 0],
+      "hat_color": [200, 100, 50],
+      "detail_color": [50, 100, 200],
+      "has_hat": false,
+      "has_scar": false,
+      "weapon": "staff",
+      "stat_bonus": {
+        "max_health": 0,
+        "base_attack": 0,
+        "defense": 0,
+        "crit_rate": 0,
+        "speed": 30
+      },
+      "passive": "貪財本能：擊殺敵人獲得雙倍金幣"
+    },
+    {
+      "id": "sanji",
+      "name": "香吉士",
+      "title": "黑腳料理長",
+      "faction": "pirate",
+      "description": "黑腳踢法大師，烹飪與戰鬥同樣一流",
+      "body_color": [30, 30, 50],
+      "skin_color": [240, 200, 160],
+      "hair_color": [220, 200, 80],
+      "hat_color": [30, 30, 50],
+      "detail_color": [180, 140, 20],
+      "has_hat": false,
+      "has_scar": false,
+      "weapon": "kick",
+      "stat_bonus": {
+        "max_health": 0,
+        "base_attack": 5,
+        "defense": 0,
+        "crit_rate": 0,
+        "speed": 20
+      },
+      "passive": "地獄之腳：技能冷卻減少 25%"
+    },
+    {
+      "id": "law",
+      "name": "特拉法爾加‧羅",
+      "title": "死亡外科醫生",
+      "faction": "pirate",
+      "description": "心臟果實能力者，ROOM技能操控者",
+      "body_color": [30, 30, 60],
+      "skin_color": [220, 190, 155],
+      "hair_color": [30, 30, 30],
+      "hat_color": [240, 240, 240],
+      "detail_color": [80, 80, 200],
+      "has_hat": true,
+      "has_scar": false,
+      "weapon": "nodachi",
+      "stat_bonus": {
+        "max_health": 0,
+        "base_attack": 3,
+        "defense": 0,
+        "crit_rate": 25,
+        "speed": 0
+      },
+      "passive": "ROOM：技能攻擊無視敵人防禦"
+    }
+  ]
+}
