@@ -24,6 +24,18 @@ def check_and_awaken(player) -> list:
         req = fruit["fragments_required"]
         if player.fruit_fragments.get(fid, 0) >= req:
             player.fruit_fragments[fid] -= req
-            player.equip_fruit(fruit)   # 允許替換當前果實
+            player.equip_fruit(fruit)
             awakened.append(fruit)
     return awakened
+
+def awaken_single(player, fruit_id: str) -> bool:
+    """Awaken one specific fruit by ID. Returns True if successful."""
+    fruit = get_fruit_by_id(fruit_id)
+    if not fruit:
+        return False
+    req = fruit["fragments_required"]
+    if player.fruit_fragments.get(fruit_id, 0) >= req:
+        player.fruit_fragments[fruit_id] -= req
+        player.equip_fruit(fruit)
+        return True
+    return False

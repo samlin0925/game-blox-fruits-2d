@@ -27,15 +27,13 @@ class CollisionManager:
         return cd["id"] if cd else ""
 
     def _player_vs_enemies(self, player):
-        import random as _rnd
         cid = self._char_id(player)
         for enemy in list(self.em.enemies) + list(self.em.bosses):
             if not enemy.alive:
                 continue
             dist = math.hypot(player.x - enemy.x, player.y - enemy.y)
             if dist < (player.width // 2 + enemy.radius) and enemy.can_attack():
-                # 路飛被動：30% 免傷
-                if cid == "luffy" and _rnd.random() < 0.30:
+                if cid == "luffy" and random.random() < 0.30:
                     self.floating.add(player.x, player.y - 30, "橡皮免傷!", (255, 160, 60))
                     enemy.reset_attack_cooldown()
                     continue
@@ -76,37 +74,35 @@ class CollisionManager:
 
     def _deal_proj_damage(self, proj, enemy, player):
         cid = self._char_id(player)
-        # 羅被動：技能投射物無視防禦
         eff_defense = 0 if (cid == "law" and proj.owner == "player") else enemy.defense
         dmg, dtype = calculate_damage(
             proj.damage, 1.0, player.get_crit_rate(), eff_defense)
         actual = enemy.take_damage(dmg)
         from core.constants import DamageType
         if dtype == DamageType.CRITICAL:
-            # 索隆被動：暴擊傷害 +50%
             if cid == "zoro":
                 extra = actual // 2
-                actual = enemy.take_damage(extra)  # extra hit
-                text = f"三刀流! {actual + extra}"
-                actual = actual + extra
+                extra_actual = enemy.take_damage(extra)
+                actual = actual + extra_actual
+                text = f"三刀流! {actual}"
             else:
                 text = f"CRIT! {actual}"
             color = (255, 215, 0)
             self.camera.shake(5, 0.15)
+            self.particles.emit_crit(enemy.x, enemy.y)   # gold star burst
             self.audio.play("crit")
         else:
             color = (255, 255, 255)
             text = str(actual)
+            self.particles.emit_hit(enemy.x, enemy.y, proj.color)
             self.audio.play("attack")
         self.floating.add(enemy.x, enemy.y - enemy.radius - 10, text, color,
                           big=(dtype == DamageType.CRITICAL))
-        self.particles.emit_hit(enemy.x, enemy.y, proj.color)
         if not enemy.alive:
             self._on_enemy_death(enemy, player)
 
     def _on_enemy_death(self, enemy, player):
         player.experience += enemy.exp_reward
-        # 娜美被動：雙倍金幣
         cid = self._char_id(player)
         gold = enemy.gold_reward * (2 if cid == "nami" else 1)
         player.gold += gold
@@ -116,7 +112,6 @@ class CollisionManager:
         self.floating.add(enemy.x, enemy.y - 60, gold_label, (255, 215, 0))
         self.particles.emit_explosion(enemy.x, enemy.y, enemy.color)
         self.audio.play("explosion")
-        # Health drop (15% chance, heals 30–50 HP)
         if random.random() < 0.15:
             heal_val = random.randint(30, 50)
             item = DroppedItem(enemy.x, enemy.y + 20, "health", heal_val, (230, 50, 60))
@@ -124,10 +119,9 @@ class CollisionManager:
 
         if hasattr(enemy, "fragment_drop_chance") and random.random() < enemy.fragment_drop_chance:
             from systems.gacha_system import get_all_fruits
-            import random as rnd
             fruits = get_all_fruits()
             weights = [f["weight"] for f in fruits]
-            fruit = rnd.choices(fruits, weights=weights, k=1)[0]
+            fruit = random.choices(fruits, weights=weights, k=1)[0]
             item = DroppedItem(enemy.x, enemy.y, "fragment", 1,
                                tuple(fruit["color"]), fruit["id"])
             self.em.items.append(item)
@@ -159,5 +153,7 @@ class CollisionManager:
                     player.gold += item.value
                 elif item.item_type == "health":
                     player.heal(item.value)
+                    self.floating.add(item.x, item.y - 20,
+                                      f"+{item.value} HP", (100, 255, 100))
                 self.audio.play("item")
                 item.alive = False

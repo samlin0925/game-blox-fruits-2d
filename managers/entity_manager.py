@@ -9,7 +9,10 @@ from ai.chase_ai import ChaseAI
 from ai.boss_ai import BossAI
 from utils.data_loader import load
 from config import (WORLD_WIDTH, WORLD_HEIGHT, MAX_ENEMIES,
-                    SPAWN_MARGIN, ENEMY_SPAWN_INTERVAL, BOSS_KILL_THRESHOLD)
+                    SPAWN_MARGIN, ENEMY_SPAWN_INTERVAL)
+
+_ZONE_BOSS_THRESHOLD = 20   # kills needed per zone before boss spawns
+
 
 class EntityManager:
     def __init__(self, player):
@@ -20,15 +23,23 @@ class EntityManager:
         self.items = []
         self._spawn_timer = 0.0
         self._kill_count = 0
+        self._zone_kill_count = 0   # resets after each boss dies
         self._boss_index = 0
         self._boss_active = False
+        self._post_boss_timer = 0.0  # cooldown after boss death before next boss
         self._enemy_data = load("enemies.json")["enemies"]
         self._boss_data = load("bosses.json")["bosses"]
         self._zone = 1
 
+    # ── Properties ─────────────────────────────────────────────────────────────
+
     @property
     def kill_count(self):
         return self._kill_count
+
+    @property
+    def zone_kill_count(self):
+        return self._zone_kill_count
 
     @property
     def boss_index(self):
@@ -38,19 +49,37 @@ class EntityManager:
     def total_bosses(self):
         return len(self._boss_data)
 
+    @property
+    def post_boss_timer(self):
+        return self._post_boss_timer
+
     def set_kill_count(self, v):
         self._kill_count = v
+        self._zone_kill_count = min(v, _ZONE_BOSS_THRESHOLD - 1)
 
     def set_boss_index(self, v):
         self._boss_index = v
+        self._zone = min(3, v + 1)
+
+    # ── Main update ────────────────────────────────────────────────────────────
 
     def update(self, dt: float, particles, camera):
+        # Post-boss transition: pause spawning, let player breathe
+        if self._post_boss_timer > 0:
+            self._post_boss_timer -= dt
+            for item in list(self.items):
+                item.update(dt)
+            self.items = [i for i in self.items if i.alive]
+            for p in list(self.projectiles):
+                p.update(dt)
+            self.projectiles = [p for p in self.projectiles if p.alive]
+            return
+
         self._spawn_timer -= dt
         if self._spawn_timer <= 0:
             self._try_spawn_enemy()
             self._spawn_timer = ENEMY_SPAWN_INTERVAL
 
-        prev_enemies = len(self.enemies) + len(self.bosses)
         for e in list(self.enemies):
             e.update(dt)
         for b in list(self.bosses):
@@ -60,8 +89,10 @@ class EntityManager:
             b.update(dt)
 
         dead_enemies = [e for e in self.enemies if not e.alive]
-        dead_bosses = [b for b in self.bosses if not b.alive]
-        self._kill_count += len(dead_enemies) + len(dead_bosses)
+        dead_bosses  = [b for b in self.bosses  if not b.alive]
+        new_kills = len(dead_enemies) + len(dead_bosses)
+        self._kill_count      += new_kills
+        self._zone_kill_count += new_kills
 
         if dead_bosses:
             for b in dead_bosses:
@@ -81,13 +112,18 @@ class EntityManager:
             self._boss_active = False
             self._boss_index += 1
             self._zone = min(3, self._boss_index + 1)
+            self._zone_kill_count = 0       # reset kill count for new zone
+            self._post_boss_timer = 12.0    # 12 second transition cooldown
+            self.enemies.clear()            # clear zone enemies
 
         self.enemies = [e for e in self.enemies if e.alive]
-        self.bosses = [b for b in self.bosses if b.alive]
+        self.bosses  = [b for b in self.bosses  if b.alive]
 
-        if (not self._boss_active and self._boss_index < len(self._boss_data)
-                and self._kill_count >= BOSS_KILL_THRESHOLD[
-                    min(self._boss_index, len(BOSS_KILL_THRESHOLD) - 1)]):
+        # Spawn next boss only after cooldown and enough zone kills
+        if (not self._boss_active
+                and self._post_boss_timer <= 0
+                and self._boss_index < len(self._boss_data)
+                and self._zone_kill_count >= _ZONE_BOSS_THRESHOLD):
             self._spawn_boss()
 
         for p in list(self.projectiles):
@@ -97,6 +133,8 @@ class EntityManager:
         for item in list(self.items):
             item.update(dt)
         self.items = [i for i in self.items if i.alive]
+
+    # ── Spawn helpers ──────────────────────────────────────────────────────────
 
     def _try_spawn_enemy(self):
         if len(self.enemies) >= MAX_ENEMIES:
@@ -135,8 +173,7 @@ class EntityManager:
         color = tuple(skill.get("color", [255, 100, 0]))
         if skill.get("aoe_radius", 0) > 0:
             aoe_r = skill["aoe_radius"]
-            import math as _m
-            dist_to_player = _m.hypot(
+            dist_to_player = math.hypot(
                 self.player.x - boss.x, self.player.y - boss.y)
             if dist_to_player < aoe_r:
                 self.player.take_damage(
@@ -175,6 +212,8 @@ class EntityManager:
                 return x, y
         return random.uniform(200, WORLD_WIDTH - 200), random.uniform(200, WORLD_HEIGHT - 200)
 
+    # ── Projectile firing ──────────────────────────────────────────────────────
+
     def fire_projectile(self, x, y, dx, dy, speed, damage, color,
                         aoe_radius=0, piercing=False, hit_count=1, size=8):
         if hit_count <= 1:
@@ -183,17 +222,18 @@ class EntityManager:
                                piercing=piercing, size=size)
             self.projectiles.append(proj)
         else:
-            import math as _m
-            base_angle = _m.atan2(dy, dx)
-            spread = _m.radians(15)
+            base_angle = math.atan2(dy, dx)
+            spread = math.radians(15)
             for i in range(hit_count):
                 offset = (i - hit_count / 2) * spread / max(1, hit_count - 1)
                 angle = base_angle + offset
-                ndx = _m.cos(angle)
-                ndy = _m.sin(angle)
+                ndx = math.cos(angle)
+                ndy = math.sin(angle)
                 proj = Projectile(x, y, ndx, ndy, speed, damage, color,
                                    owner="player", size=size)
                 self.projectiles.append(proj)
+
+    # ── Draw ───────────────────────────────────────────────────────────────────
 
     def draw(self, screen, camera):
         for item in self.items:
