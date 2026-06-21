@@ -32,6 +32,8 @@ class Player(BaseEntity):
 
         self.attack_cooldown = 0.0
         self.skill_cooldown = 0.0
+        self.potions = 0           # storable health potions (max 5), use with H key
+        self.gacha_tickets = 0     # earned from level milestones
 
         self.hurt_timer = 0.0
         self.freeze_timer = 0.0
@@ -108,10 +110,38 @@ class Player(BaseEntity):
             return 0
         damage = max(1, amount - self.defense // 2)
         self.health = max(0, self.health - damage)
-        self.hurt_timer = 0.3
+        self.hurt_timer = 0.4
+        # Grant 0.6s invincibility frames so player isn't hit every frame
+        self.invincible = True
+        self.invincible_timer = 0.6
+        self.invincible_flash = 0.0
         if self.health <= 0:
             self.alive = False
         return damage
+
+    def _draw_direction_arrow(self, screen, sx, sy, r):
+        fx, fy = self.facing_x, self.facing_y
+        length = math.hypot(fx, fy)
+        if length < 0.01:
+            return
+        nx, ny = fx / length, fy / length
+        # Arrow tip sits just outside the player circle
+        tip_x = sx + int(nx * (r + 14))
+        tip_y = sy + int(ny * (r + 14))
+        # Base of arrowhead (perpendicular)
+        perp_x, perp_y = -ny, nx
+        base_x = sx + int(nx * (r + 4))
+        base_y = sy + int(ny * (r + 4))
+        half = 5
+        p1 = (int(base_x + perp_x * half), int(base_y + perp_y * half))
+        p2 = (int(base_x - perp_x * half), int(base_y - perp_y * half))
+        arrow_color = (255, 255, 80)
+        outline_color = (80, 60, 0)
+        pygame.draw.polygon(screen, outline_color, [(tip_x, tip_y), p1, p2])
+        pygame.draw.polygon(screen, arrow_color,
+                            [(tip_x, tip_y), p1, p2], 0)
+        pygame.draw.polygon(screen, outline_color,
+                            [(tip_x, tip_y), p1, p2], 1)
 
     def heal(self, amount: int):
         self.health = min(self.max_health, self.health + amount)
@@ -167,6 +197,10 @@ class Player(BaseEntity):
 
         if self.invincible and not blink:
             pygame.draw.circle(screen, (100, 200, 255), (sx, sy), r + 4, 2)
+
+        # 移動方向箭頭
+        if not blink:
+            self._draw_direction_arrow(screen, sx, sy, r)
 
         # 血條
         bar_w = 44

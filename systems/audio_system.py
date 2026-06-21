@@ -177,11 +177,11 @@ def _bgm_menu():
     t = _t(total)
     music = np.zeros(len(t), dtype=np.float32)
 
-    # 暖和弦墊底 — C大調 (C E G C5)
+    # 暖和弦墊底 — C大調 (C E G C5)，淡入避免突兀開頭
     chord = [261.63, 329.63, 392.00, 523.25]
+    fade_in = np.clip(t / 1.5, 0.0, 1.0)   # 1.5 秒淡入
     for freq in chord:
-        vib = 1 + 0.006 * np.sin(2 * np.pi * 5.0 * t)
-        music += _sine(freq * vib, t) * 0.055
+        music += _sine(freq, t) * 0.05 * fade_in
 
     # 輕快鋼琴/鐘琴主旋律 — C大調五聲音階
     # C D E G A C D E G (歡快跳躍)
@@ -201,7 +201,7 @@ def _bgm_menu():
         1.0, 0.5, 0.5, 0.5, 0.5, 0.5,
         1.0, 0.5, 0.5, 1.0,
     ]
-    pos = beat * 4  # 第二小節才進入旋律
+    pos = beat * 2  # 第一小節後半進入旋律（更快活潑）
     for freq, dur_b in zip(melody, rhythm):
         d_sec = dur_b * beat * 0.82
         dur = int(d_sec * SR)
@@ -237,7 +237,13 @@ def _bgm_menu():
         _mix(music, int((b * beat + beat * 0.5) * SR),
              _noise(dur) * np.exp(-ta * 70) * 0.12)
 
-    return _to_sound(np.clip(music, -1, 1), 0.72)
+    # Global 0.8s fade-in to mask any audio driver startup artifact
+    fade_len = min(int(0.8 * SR), len(music))
+    music[:fade_len] *= np.linspace(0.0, 1.0, fade_len, dtype=np.float32)
+    peak = float(np.max(np.abs(music))) or 1.0
+    if peak > 0.85:
+        music *= 0.85 / peak
+    return _to_sound(music, 0.72)
 
 
 def _bgm_battle():
@@ -324,7 +330,11 @@ def _bgm_battle():
             seg = _sine(freq, ta) * _adsr(dur, 0.12, 0.20, 0.55, 0.35) * 0.06
             _mix(music, int(t0 * SR), seg)
 
-    return _to_sound(np.clip(music, -1, 1), 0.75)
+    # Normalize to prevent hard-clipping distortion (multiple layers summing > 1.0)
+    peak = float(np.max(np.abs(music))) or 1.0
+    if peak > 0.80:
+        music *= 0.80 / peak
+    return _to_sound(music, 0.75)
 
 
 def _bgm_boss():
@@ -418,7 +428,11 @@ def _bgm_boss():
         seg = _sawtooth(freq * vib, ta) * _adsr(dur, 0.005, 0.08, 0.65, 0.30) * 0.14
         _mix(music, int(t0 * SR), seg)
 
-    return _to_sound(np.clip(music, -1, 1), 0.78)
+    # Normalize to prevent hard-clipping distortion
+    peak = float(np.max(np.abs(music))) or 1.0
+    if peak > 0.80:
+        music *= 0.80 / peak
+    return _to_sound(music, 0.78)
 
 
 # ── 主類別 ─────────────────────────────────────────────────
@@ -431,7 +445,12 @@ class AudioSystem:
         self._music_volume = 0.5
 
         try:
-            pygame.mixer.init(frequency=SR, size=-16, channels=2, buffer=1024)
+            # Always do a clean restart so we own the mixer settings
+            try:
+                pygame.mixer.quit()
+            except Exception:
+                pass
+            pygame.mixer.init(frequency=SR, size=-16, channels=2, buffer=2048)
             pygame.mixer.set_num_channels(16)
             self._enabled = True
             self._build_sounds()
@@ -439,21 +458,33 @@ class AudioSystem:
             print(f"[Audio] init failed: {e}")
 
     def _build_sounds(self):
-        builders = {
-            "attack":     _sfx_attack,
-            "crit":       _sfx_crit,
-            "skill":      _sfx_skill,
-            "hit":        _sfx_hit,
-            "item":       _sfx_item,
-            "level_up":   _sfx_level_up,
-            "boss":       _sfx_boss,
-            "explosion":  _sfx_explosion,
-            "game_over":  _sfx_game_over,
-            "bgm_menu":   _bgm_menu,
-            "bgm_battle": _bgm_battle,
-            "bgm_boss":   _bgm_boss,
-        }
-        for name, fn in builders.items():
+        # Build and play menu BGM first — feeds the audio driver immediately
+        # so there's no silent starvation period that causes crackling artifacts.
+        try:
+            self._sounds["bgm_menu"] = _bgm_menu()
+            self.play_music("bgm_menu")
+        except Exception as e:
+            print(f"[Audio] failed to build 'bgm_menu': {e}")
+
+        # SFX — small and fast, needed as soon as gameplay starts
+        for name, fn in [
+            ("attack",    _sfx_attack),
+            ("crit",      _sfx_crit),
+            ("skill",     _sfx_skill),
+            ("hit",       _sfx_hit),
+            ("item",      _sfx_item),
+            ("level_up",  _sfx_level_up),
+            ("boss",      _sfx_boss),
+            ("explosion", _sfx_explosion),
+            ("game_over", _sfx_game_over),
+        ]:
+            try:
+                self._sounds[name] = fn()
+            except Exception as e:
+                print(f"[Audio] failed to build '{name}': {e}")
+
+        # Battle BGMs — largest arrays, built last while menu BGM is already playing
+        for name, fn in [("bgm_battle", _bgm_battle), ("bgm_boss", _bgm_boss)]:
             try:
                 self._sounds[name] = fn()
             except Exception as e:

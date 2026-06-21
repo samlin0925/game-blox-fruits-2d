@@ -39,5 +39,9 @@ class PatrolAI(BaseAI):
                 self.state_timer -= dt
         else:
             ndx, ndy = self.direction_to_player(entity)
-            entity.vx = ndx * entity.speed
-            entity.vy = ndy * entity.speed
+            if dist <= entity.attack_range:
+                entity.vx = 0
+                entity.vy = 0
+            else:
+                entity.vx = ndx * entity.speed
+                entity.vy = ndy * entity.speed

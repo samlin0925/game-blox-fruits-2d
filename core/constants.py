@@ -11,6 +11,7 @@ class GameState(Enum):
     ENDING_CUTSCENE = auto()
     CHEAT_INPUT = auto()
     GACHA_UI = auto()
+    CHEAT_MENU = auto()
 
 class AIState(Enum):
     IDLE = auto()

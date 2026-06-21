@@ -57,7 +57,7 @@ class BackgroundScene:
     def __init__(self, w: int, h: int, scene_id: int = -1):
         self.w = w
         self.h = h
-        self.scene_id = random.randint(0, 3) if scene_id < 0 else scene_id
+        self.scene_id = random.choice([2, 2, 3, 3, 0]) if scene_id < 0 else scene_id
         self.t = 0.0
         self._lightning_timer = 0.0
         self._lightning_flash = 0.0

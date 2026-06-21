@@ -55,18 +55,27 @@ class MenuScreen:
 
     def draw(self, screen):
         self._bg.draw(screen)
-        # 半透明遮罩讓文字在任何背景下都清晰
+        # 輕薄半透明遮罩（避免陰暗感）
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 110))
+        overlay.fill((0, 0, 0, 55))
         screen.blit(overlay, (0, 0))
         t = self._timer
         pulse = abs(math.sin(t * 1.5)) * 0.3 + 0.7
-        title_color = (int(255 * pulse), int(200 * pulse), 0)
+
+        # 標題光暈
+        title_color = (int(255 * pulse), int(215 * pulse), 30)
+        glow_surf = self.font_title.render("惡魔果實 2D", True,
+                                            (80, 60, 0))
+        for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]:
+            screen.blit(glow_surf,
+                        (SCREEN_WIDTH // 2 - glow_surf.get_width() // 2 + dx,
+                         160 + dy))
         title_surf = self.font_title.render("惡魔果實 2D", True, title_color)
         screen.blit(title_surf,
                     (SCREEN_WIDTH // 2 - title_surf.get_width() // 2, 160))
+
         sub_surf = self.font_sub.render(
-            "Blox Fruits 2D  |  快節奏爽快冒險", True, (160, 160, 200))
+            "Blox Fruits 2D  |  快節奏爽快冒險", True, (200, 200, 230))
         screen.blit(sub_surf,
                     (SCREEN_WIDTH // 2 - sub_surf.get_width() // 2, 250))
         self.btn_new.draw(screen)
@@ -86,23 +95,32 @@ class MenuScreen:
         focus_btns.append(self.btn_quit)
         if self._focused < len(focus_btns):
             fb = focus_btns[self._focused]
-            pulse = abs(math.sin(t * 4)) * 0.5 + 0.5
+            p2 = abs(math.sin(t * 4)) * 0.5 + 0.5
             arrow_x = fb.rect.left - 24
             arrow_y = fb.rect.centery
-            arrow_c = (int(255 * pulse), int(200 * pulse), 0)
+            arrow_c = (int(255 * p2), int(200 * p2), 0)
             pygame.draw.polygon(screen, arrow_c, [
                 (arrow_x, arrow_y - 8),
                 (arrow_x + 16, arrow_y),
                 (arrow_x, arrow_y + 8),
             ])
         tips = [
-            "WASD 移動  |  J 攻擊  |  K 使用果實技能",
-            "~ 密技碼輸入  |  T 開啟祭壇  |  ESC 暫停",
-            "消滅敵人獲得碎片 -> 前往祭壇覺醒果實！",
+            "WASD 移動  |  J 攻擊  |  K 果實技能  |  H 喝藥水",
+            "~ 密技碼  |  T 祭壇（覺醒/商店/抽卡）  |  ESC 暫停",
+            "消滅敵人獲得碎片 → 祭壇覺醒果實 → 解鎖強力技能！",
         ]
         for i, tip in enumerate(tips):
-            surf = self.font_s.render(tip, True, (100, 100, 140))
+            surf = self.font_s.render(tip, True, (160, 160, 200))
             screen.blit(surf,
                         (SCREEN_WIDTH // 2 - surf.get_width() // 2, 555 + i * 22))
-        ver = self.font_s.render("v1.0 MVP | 2026 | Sam Lin", True, (60, 60, 80))
-        screen.blit(ver, (SCREEN_WIDTH - ver.get_width() - 10, SCREEN_HEIGHT - 20))
+
+        # 版本與作者
+        from config import VERSION
+        ver = self.font_s.render(f"{VERSION}  |  2026  |  Sam Lin", True, (120, 120, 150))
+        screen.blit(ver, (SCREEN_WIDTH // 2 - ver.get_width() // 2, SCREEN_HEIGHT - 40))
+
+        # 作者與測試人員名單
+        credits = self.font_s.render(
+            "作者：Sam Lin  |  測試：Beta Testers", True, (100, 130, 180))
+        screen.blit(credits,
+                    (SCREEN_WIDTH // 2 - credits.get_width() // 2, SCREEN_HEIGHT - 22))

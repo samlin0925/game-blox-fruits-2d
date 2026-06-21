@@ -26,7 +26,7 @@ class HUD:
         self._draw_gold(screen, player)
         self._draw_fruit_info(screen, player)
         self._draw_kill_counter(screen, zone_kill_count, boss_index)
-        self._draw_controls_hint(screen)
+        self._draw_controls_hint(screen, player)
         if near_altar:
             self._draw_altar_hint(screen, player)
         if boss_list:
@@ -70,6 +70,15 @@ class HUD:
         pygame.draw.circle(screen, (255, 240, 120), (gx - 3, gy + 5), 3)
         surf = self.font_m.render(str(player.gold), True, YELLOW)
         screen.blit(surf, (gx + 14, gy))
+        # Potion counter
+        potions = getattr(player, 'potions', 0)
+        if potions > 0:
+            pot_c = (80, 230, 120)
+            pygame.draw.circle(screen, pot_c, (gx, gy + 30), 7)
+            pygame.draw.circle(screen, (40, 180, 80), (gx, gy + 30), 7, 1)
+            pygame.draw.circle(screen, (200, 255, 210), (gx - 2, gy + 27), 2)
+            p_surf = self.font_s.render(f"x{potions} [H]", True, pot_c)
+            screen.blit(p_surf, (gx + 10, gy + 22))
 
     def _draw_fruit_info(self, screen, player):
         x = SCREEN_WIDTH - 195
@@ -120,12 +129,24 @@ class HUD:
                                    (255, 80, 80) if progress >= 1.0 else (220, 200, 120))
         screen.blit(surf, (SCREEN_WIDTH // 2 - surf.get_width() // 2, by + 16))
 
-    def _draw_controls_hint(self, screen):
-        if int(self._hint_timer) % 10 < 7:
+    def _draw_controls_hint(self, screen, player=None):
+        if int(self._hint_timer) % 10 >= 7:
+            return
+        phase = int(self._hint_timer / 10) % 2
+        if phase == 0:
             hints = "WASD 移動  J 攻擊  K 技能  T 祭壇  ` 密技  ESC 暫停"
-            surf = self.font_s.render(hints, True, (120, 120, 120))
-            screen.blit(surf, (SCREEN_WIDTH // 2 - surf.get_width() // 2,
-                                SCREEN_HEIGHT - 22))
+            color = (120, 120, 120)
+        else:
+            potions = getattr(player, "potions", 0) if player else 0
+            if potions > 0:
+                hints = f"H 使用藥水(x{potions})  |  ESC → 暫停選單 → 💾 儲存遊戲"
+                color = (100, 200, 120)
+            else:
+                hints = "ESC → 暫停選單 → 💾 儲存遊戲  |  T 靠近金色標記開啟祭壇"
+                color = (140, 140, 180)
+        surf = self.font_s.render(hints, True, color)
+        screen.blit(surf, (SCREEN_WIDTH // 2 - surf.get_width() // 2,
+                            SCREEN_HEIGHT - 22))
 
     def _draw_altar_hint(self, screen, player):
         total = sum(player.fruit_fragments.values())

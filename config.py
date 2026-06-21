@@ -1,9 +1,10 @@
 import os
 
+VERSION = "v1.1.0"
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
-TITLE = "Blox Fruits 2D - 惡魔果實冒險"
+TITLE = f"Blox Fruits 2D - 惡魔果實冒險  {VERSION}"
 
 WORLD_WIDTH = 3840
 WORLD_HEIGHT = 2160

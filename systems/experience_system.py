@@ -24,9 +24,8 @@ def _apply_stat_gain(player):
     gains = data["stat_per_level"]
     player.base_attack += gains["attack"]
     player.defense += gains["defense"]
-    old_max = player.max_health
     player.max_health += gains["health"]
-    player.health += player.max_health - old_max
+    player.health = player.max_health  # restore to full HP on level up
 
 def _check_milestone(player):
     data = load("levels.json")
@@ -35,6 +34,9 @@ def _check_milestone(player):
             player.experience += ms.get("reward_exp", 0)
             player.gold += ms.get("reward_gold", 0)
             player.title = ms.get("reward_title", player.title)
+            tickets = ms.get("free_gacha", 0)
+            if tickets > 0:
+                player.gacha_tickets = getattr(player, "gacha_tickets", 0) + tickets
             return ms
     return None
 

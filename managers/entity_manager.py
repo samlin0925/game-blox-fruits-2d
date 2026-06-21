@@ -30,6 +30,7 @@ class EntityManager:
         self._enemy_data = load("enemies.json")["enemies"]
         self._boss_data = load("bosses.json")["bosses"]
         self._zone = 1
+        self._zone_changed = False  # True for one frame after boss dies
 
     # ── Properties ─────────────────────────────────────────────────────────────
 
@@ -52,6 +53,12 @@ class EntityManager:
     @property
     def post_boss_timer(self):
         return self._post_boss_timer
+
+    @property
+    def zone_changed(self) -> bool:
+        v = self._zone_changed
+        self._zone_changed = False
+        return v
 
     def set_kill_count(self, v):
         self._kill_count = v
@@ -82,6 +89,7 @@ class EntityManager:
 
         for e in list(self.enemies):
             e.update(dt)
+        self._separate_enemies()
         for b in list(self.bosses):
             skill = b.ai.update(dt, b) if b.ai else None
             if skill:
@@ -98,6 +106,9 @@ class EntityManager:
             for b in dead_bosses:
                 particles.emit_explosion(b.x, b.y, b.color, 50, 350)
                 camera.shake(25, 1.5)
+                # Grant EXP and gold directly — values defined in bosses.json
+                self.player.experience += b.exp_reward
+                self.player.gold += b.gold_reward
                 frag = b.fragment_reward
                 if frag:
                     from systems.gacha_system import get_fruit_by_id
@@ -114,6 +125,7 @@ class EntityManager:
             self._zone = min(3, self._boss_index + 1)
             self._zone_kill_count = 0       # reset kill count for new zone
             self._post_boss_timer = 12.0    # 12 second transition cooldown
+            self._zone_changed = True       # signal GSM to teleport player
             self.enemies.clear()            # clear zone enemies
 
         self.enemies = [e for e in self.enemies if e.alive]
@@ -178,10 +190,11 @@ class EntityManager:
             if dist_to_player < aoe_r:
                 self.player.take_damage(
                     int(boss.attack * skill["damage_multiplier"]))
+                # Only freeze the player if they're inside the AOE
+                freeze = skill.get("freeze_duration", 0)
+                if freeze:
+                    self.player.freeze(freeze)
             particles.emit_boss_skill(boss.x, boss.y, color)
-            freeze = skill.get("freeze_duration", 0)
-            if freeze:
-                self.player.freeze(freeze)
         else:
             dx = self.player.x - boss.x
             dy = self.player.y - boss.y
@@ -190,6 +203,33 @@ class EntityManager:
                                color, owner="boss",
                                piercing=skill.get("piercing", False), size=14)
             self.projectiles.append(proj)
+
+    def _separate_enemies(self):
+        """Push overlapping enemies apart so they spread into a ring, not a pile."""
+        entities = [e for e in self.enemies if e.alive]
+        n = len(entities)
+        for i in range(n):
+            a = entities[i]
+            for j in range(i + 1, n):
+                b = entities[j]
+                dx = a.x - b.x
+                dy = a.y - b.y
+                dist = math.hypot(dx, dy)
+                min_dist = a.radius + b.radius + 4  # tiny gap between sprites
+                if 0 < dist < min_dist:
+                    # Push both apart equally
+                    push = (min_dist - dist) * 0.5
+                    nx, ny = dx / dist, dy / dist
+                    a.x += nx * push
+                    a.y += ny * push
+                    b.x -= nx * push
+                    b.y -= ny * push
+                elif dist == 0:
+                    # Exact overlap: push randomly
+                    import random as _r
+                    angle = _r.uniform(0, 6.283)
+                    a.x += math.cos(angle) * min_dist * 0.5
+                    a.y += math.sin(angle) * min_dist * 0.5
 
     def _random_spawn_pos(self):
         px, py = self.player.x, self.player.y

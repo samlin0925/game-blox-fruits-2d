@@ -76,6 +76,7 @@ _PANELS = [
 _CREDITS = [
     ("", ""),
     ("製作", "Sam Lin"),
+    ("測試", "Jasper Lin"),
     ("", ""),
     ("引擎", "Python 3.10 + Pygame 2.6"),
     ("音樂音效", "NumPy 程式合成"),

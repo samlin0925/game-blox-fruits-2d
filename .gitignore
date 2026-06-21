@@ -27,3 +27,7 @@ desktop.ini
 # Game saves / logs
 save_*.json
 *.log
+
+# Generated build artifacts (do not commit)
+release/icon.ico
+release/icon.png

@@ -417,6 +417,9 @@ class Boss(BaseEntity):
         self.attack_cooldown = 0.0
         self.attack_cooldown_max = data.get("attack_cooldown", 1.2)
 
+    def freeze(self, duration: float):
+        self.freeze_timer = max(self.freeze_timer, duration)
+
     def can_attack(self) -> bool:
         return self.attack_cooldown <= 0
 

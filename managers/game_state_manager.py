@@ -2,7 +2,8 @@ import pygame
 import math
 from core.constants import GameState, WHITE, YELLOW, RED
 from config import (SCREEN_WIDTH, SCREEN_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT,
-                    PLAYER_BASE_SPEED, PROJECTILE_BASE_SPEED, ALTAR_POS)
+                    PLAYER_BASE_SPEED, PROJECTILE_BASE_SPEED, ALTAR_POS,
+                    ZONE_BOUNDARIES)
 from entities.player import Player
 from managers.camera_manager import CameraManager
 from managers.entity_manager import EntityManager
@@ -52,9 +53,15 @@ class GameStateManager:
         self._cheat_result_timer = 0.0
         self._cheat_input = ""
         self._altar_open = False
-        self._altar_tab = 0          # 0=awaken, 1=shop
+        self._altar_tab = 0          # 0=awaken, 1=shop, 2=gacha
         self._altar_selected = 0     # selected row index
         self._game_over_timer = 0.0
+        self._boss_announce_timer = 0.0
+        self._boss_announce_name = ""
+        self._boss_announce_title = ""
+        self._gacha_result_list = []   # list of fruit dicts from last gacha pull
+        self._gacha_result_timer = 0.0
+        self._cheat_menu_selected = 0
 
     def _init_playing(self, load=False, char_id: str = "luffy"):
         from_save = load
@@ -92,7 +99,13 @@ class GameStateManager:
         self._altar_open = False
         self._altar_tab = 0
         self._altar_selected = 0
+        self._cheat_menu_selected = 0
         self._cheat_input = ""
+        self._boss_announce_timer = 0.0
+        self._boss_announce_name = ""
+        self._boss_announce_title = ""
+        self._gacha_result_list = []
+        self._gacha_result_timer = 0.0
 
     # ── Event handling ─────────────────────────────────────────────────────────
 
@@ -111,11 +124,17 @@ class GameStateManager:
                 self._handle_cheat_event(event)
             elif self.state == GameState.GACHA_UI:
                 self._handle_altar_event(event)
+            elif self.state == GameState.CHEAT_MENU:
+                self._handle_cheat_menu_event(event)
         return ""
 
     def _handle_playing_event(self, event):
         if event.type == pygame.KEYDOWN:
             k = event.key
+            # Dismiss gacha result panel
+            if self._gacha_result_timer > 0 and k in (pygame.K_RETURN, pygame.K_SPACE):
+                self._gacha_result_timer = 0.0
+                return
             if k == pygame.K_ESCAPE:
                 self.state = GameState.PAUSED
             elif k == pygame.K_BACKQUOTE or k == pygame.K_BACKSLASH:
@@ -125,6 +144,8 @@ class GameStateManager:
                 self._player_basic_attack()
             elif k == pygame.K_k:
                 self._player_skill()
+            elif k == pygame.K_h:
+                self._use_potion()
             elif k == pygame.K_t:
                 if self.scene.is_near_altar(self.player.x, self.player.y):
                     self.state = GameState.GACHA_UI
@@ -136,19 +157,27 @@ class GameStateManager:
         if event.type != pygame.KEYDOWN:
             return
         k = event.key
+        # Any key press dismisses the gacha result banner
+        if self._gacha_result_timer > 0:
+            self._gacha_result_timer = 0.0
         fruits = get_all_fruits()
-        n_items = len(fruits) if self._altar_tab == 0 else len(SHOP_ITEMS)
+        if self._altar_tab == 0:
+            n_items = len(fruits)
+        elif self._altar_tab == 1:
+            n_items = len(SHOP_ITEMS)
+        else:
+            n_items = 2  # gacha tab: 1-pull, 10-pull
 
         if k in (pygame.K_t, pygame.K_ESCAPE):
             self.state = GameState.PLAYING
             self._altar_open = False
 
         elif k in (pygame.K_LEFT, pygame.K_a):
-            self._altar_tab = 0
+            self._altar_tab = (self._altar_tab - 1) % 3
             self._altar_selected = 0
 
         elif k in (pygame.K_RIGHT, pygame.K_d):
-            self._altar_tab = 1
+            self._altar_tab = (self._altar_tab + 1) % 3
             self._altar_selected = 0
 
         elif k in (pygame.K_UP, pygame.K_w):
@@ -160,8 +189,10 @@ class GameStateManager:
         elif k in (pygame.K_RETURN, pygame.K_SPACE):
             if self._altar_tab == 0:
                 self._try_awaken(fruits)
-            else:
+            elif self._altar_tab == 1:
                 self._try_purchase()
+            else:
+                self._try_gacha_pull()
 
     def _try_awaken(self, fruits):
         if self._altar_selected >= len(fruits):
@@ -195,15 +226,19 @@ class GameStateManager:
         if sid == "gacha":
             result = pull_gacha(1)[0]
             self.player.add_fragment(result["id"], 1)
-            self._cheat_result_msg = f"🎰 獲得 {result['name']} 碎片！"
+            _rar = {"legendary": "★★★ 傳說", "epic": "★★ 史詩",
+                    "rare": "★ 稀有"}.get(result.get("rarity", ""), "◆ 普通")
+            self._cheat_result_msg = f"🎰 {_rar}｜{result['name']} 碎片 ×1！"
             self.audio.play("item")
 
         elif sid == "heal":
-            heal_amount = self.player.max_health // 2
-            self.player.heal(heal_amount)
-            self._cheat_result_msg = f"💊 恢復 {heal_amount} HP！"
-            self.particles.emit(self.player.x, self.player.y,
-                                (100, 255, 100), 20, 150, 1.0, 5, 360, -30)
+            if getattr(self.player, 'potions', 0) >= 5:
+                self._cheat_result_msg = "藥水已滿！（最多5瓶）"
+                self._cheat_result_timer = 2.0
+                self.player.gold += item["cost"]  # refund
+                return
+            self.player.potions = getattr(self.player, 'potions', 0) + 1
+            self._cheat_result_msg = f"💊 獲得生命藥水！（按 H 使用，庫存：{self.player.potions}/5）"
             self.audio.play("item")
 
         elif sid == "atk_up":
@@ -224,13 +259,55 @@ class GameStateManager:
             self.particles.emit_crit(self.player.x, self.player.y)
             self.audio.play("crit")
 
-        self._cheat_result_timer = 3.0
+        self._cheat_result_timer = 4.0
+
+    def _try_gacha_pull(self):
+        count = 1 if self._altar_selected == 0 else 10
+        cost = count * 100
+        tickets = getattr(self.player, 'gacha_tickets', 0)
+        use_tickets = tickets >= count
+
+        if not use_tickets and self.player.gold < cost:
+            self._cheat_result_msg = f"金幣不足！需要 {cost} G 或 {count} 張抽卡券"
+            self._cheat_result_timer = 2.0
+            return
+
+        if use_tickets:
+            self.player.gacha_tickets = tickets - count
+        else:
+            self.player.gold -= cost
+
+        results = pull_gacha(count)
+        for r in results:
+            self.player.add_fragment(r["id"], 1)
+
+        self._gacha_result_list = results
+        self._gacha_result_timer = 6.0
+        self.camera.shake(10 * count, min(1.5, 0.3 * count))
+        self.particles.emit_level_up(self.player.x, self.player.y)
+        self.audio.play("level_up")
+
+        # Close altar so gacha result panel is fully visible (altar would draw on top)
+        self.state = GameState.PLAYING
+        self._altar_open = False
+
+        rarities = [r["rarity"] for r in results]
+        if "legendary" in rarities:
+            self._cheat_result_msg = f"★★★ 傳說出現！{count} 抽完成！"
+        else:
+            self._cheat_result_msg = f"抽卡完成！獲得 {count} 個碎片"
+        self._cheat_result_timer = 1.5
 
     def _handle_cheat_event(self, event):
         if event.type == pygame.KEYDOWN:
             k = event.key
             if k == pygame.K_RETURN:
                 if self._cheat_input:
+                    if self._cheat_input.upper() == "SAMLIN":
+                        self.state = GameState.CHEAT_MENU
+                        self._cheat_menu_selected = 0
+                        self._cheat_input = ""
+                        return
                     result = self.cheats.execute(self._cheat_input)
                     self._cheat_result_msg = result["message"]
                     self._cheat_result_timer = 3.0
@@ -245,6 +322,30 @@ class GameStateManager:
                 char = event.unicode.upper()
                 if char.isalnum() and len(self._cheat_input) < 20:
                     self._cheat_input += char
+
+    def _get_cheat_list(self) -> list:
+        return list(self.cheats.cheat_data.values())
+
+    def _handle_cheat_menu_event(self, event):
+        if event.type != pygame.KEYDOWN:
+            return
+        k = event.key
+        cheats = self._get_cheat_list()
+        n = len(cheats)
+        if k == pygame.K_ESCAPE:
+            self.state = GameState.PLAYING
+        elif k in (pygame.K_UP, pygame.K_w):
+            self._cheat_menu_selected = (self._cheat_menu_selected - 1) % n
+        elif k in (pygame.K_DOWN, pygame.K_s):
+            self._cheat_menu_selected = (self._cheat_menu_selected + 1) % n
+        elif k in (pygame.K_RETURN, pygame.K_SPACE):
+            if cheats:
+                cheat = cheats[self._cheat_menu_selected]
+                result = self.cheats.execute(cheat["code"])
+                self._cheat_result_msg = result["message"]
+                self._cheat_result_timer = 3.0
+                if result["success"]:
+                    self.camera.shake(15, 0.5)
 
     # ── Player actions ─────────────────────────────────────────────────────────
 
@@ -319,6 +420,25 @@ class GameStateManager:
         self.audio.play("skill")
         self.camera.shake(8, 0.3)
 
+    def _use_potion(self):
+        potions = getattr(self.player, 'potions', 0)
+        if potions <= 0:
+            self._cheat_result_msg = "沒有藥水！（前往祭壇→商店購買）"
+            self._cheat_result_timer = 1.5
+            return
+        if self.player.health >= self.player.max_health:
+            self._cheat_result_msg = "HP 已滿！"
+            self._cheat_result_timer = 1.0
+            return
+        heal_amount = self.player.max_health // 2
+        self.player.heal(heal_amount)
+        self.player.potions = potions - 1
+        self._cheat_result_msg = f"💊 恢復 {heal_amount} HP！剩餘藥水：{self.player.potions}/5"
+        self._cheat_result_timer = 2.0
+        self.particles.emit(self.player.x, self.player.y,
+                            (100, 255, 100), 20, 150, 1.0, 5, 360, -30)
+        self.audio.play("item")
+
     # ── Update ─────────────────────────────────────────────────────────────────
 
     def update(self, dt: float):
@@ -343,6 +463,9 @@ class GameStateManager:
         elif self.state == GameState.GACHA_UI:
             if self._playing_initialized:
                 self._update_playing_passive(dt)
+        elif self.state == GameState.CHEAT_MENU:
+            if self._playing_initialized:
+                self._update_playing_passive(dt)
 
     def _update_playing(self, dt: float):
         keys = pygame.key.get_pressed()
@@ -363,6 +486,11 @@ class GameStateManager:
         if not had_boss and has_boss_now:
             self.audio.play_music("bgm_boss")
             self.audio.play("boss")
+            # Boss intro announcement
+            b = self.entity_manager.bosses[0]
+            self._boss_announce_timer = 4.0
+            self._boss_announce_name = b.name
+            self._boss_announce_title = b.title
         elif had_boss and not has_boss_now:
             new_idx = self.entity_manager.boss_index
             if new_idx > prev_boss_idx and new_idx >= self.entity_manager.total_bosses:
@@ -371,6 +499,21 @@ class GameStateManager:
                 self.state = GameState.ENDING_CUTSCENE
                 return
             self.audio.play_music("bgm_battle")
+        # Zone teleport: move player to center of new zone after boss dies
+        if self.entity_manager.zone_changed:
+            zone_idx = self.entity_manager.boss_index  # 1=zone2, 2=zone3
+            if 1 <= zone_idx < len(ZONE_BOUNDARIES) - 1:
+                new_x = (ZONE_BOUNDARIES[zone_idx] + ZONE_BOUNDARIES[zone_idx + 1]) // 2
+                new_y = WORLD_HEIGHT // 2
+                self.player.x = float(new_x)
+                self.player.y = float(new_y)
+                self.camera.x = new_x - SCREEN_WIDTH / 2
+                self.camera.y = new_y - SCREEN_HEIGHT / 2
+            # Auto-save progress after boss defeat
+            save_game(self.player, self.entity_manager.kill_count,
+                      self.entity_manager.boss_index)
+            self._cheat_result_msg = "💾 進度已自動存檔！"
+            self._cheat_result_timer = 3.5
         self.collision.process(self.player)
 
         level_ups = check_level_up(self.player)
@@ -385,6 +528,10 @@ class GameStateManager:
             self.audio.play("level_up")
             self.floating.add(self.player.x, self.player.y - 60,
                               f"LEVEL UP! Lv.{lv}", (255, 215, 0), big=True)
+            if ms and ms.get("free_gacha", 0) > 0:
+                tickets = ms["free_gacha"]
+                self._cheat_result_msg = f"★ 里程碑！獲得 {tickets} 張抽卡券！前往祭壇→抽卡使用"
+                self._cheat_result_timer = 4.0
 
         self._update_playing_passive(dt)
 
@@ -399,6 +546,10 @@ class GameStateManager:
             self._level_up_banner_timer -= dt
         if self._cheat_result_timer > 0:
             self._cheat_result_timer -= dt
+        if self._boss_announce_timer > 0:
+            self._boss_announce_timer -= dt
+        if self._gacha_result_timer > 0:
+            self._gacha_result_timer -= dt
 
     # ── Render ─────────────────────────────────────────────────────────────────
 
@@ -414,11 +565,11 @@ class GameStateManager:
         elif self.state == GameState.CHARACTER_SELECT:
             self.char_select.draw(self.screen)
         elif self.state in (GameState.PLAYING, GameState.CHEAT_INPUT,
-                             GameState.GACHA_UI):
+                             GameState.GACHA_UI, GameState.CHEAT_MENU):
             self._render_playing()
         elif self.state == GameState.PAUSED:
             self._render_playing()
-            self.pause_menu.draw(self.screen)
+            self.pause_menu.draw(self.screen, self.player if self._playing_initialized else None)
         elif self.state == GameState.GAME_OVER:
             self._render_playing()
             self.dialog.draw_game_over(
@@ -443,15 +594,27 @@ class GameStateManager:
         if self._level_up_banner_timer > 0:
             self.dialog.draw_level_up_banner(
                 self.screen, self._level_up_level, self._level_up_milestone)
-        if self._cheat_result_timer > 0:
-            self.dialog.draw_cheat_result(
-                self.screen, self._cheat_result_msg, self._cheat_result_timer)
+        if self._boss_announce_timer > 0:
+            self.dialog.draw_boss_announce(
+                self.screen, self._boss_announce_name,
+                self._boss_announce_title, self._boss_announce_timer)
+        if self._gacha_result_timer > 0:
+            self.dialog.draw_gacha_result(
+                self.screen, self._gacha_result_list, self._gacha_result_timer)
         if self.state == GameState.CHEAT_INPUT:
             self._draw_cheat_input()
         if self.state == GameState.GACHA_UI:
             self.dialog.draw_altar(
                 self.screen, self.player,
                 self._altar_selected, self._altar_tab)
+        # draw_cheat_result AFTER altar so it renders on top of the altar panel
+        if self._cheat_result_timer > 0:
+            self.dialog.draw_cheat_result(
+                self.screen, self._cheat_result_msg, self._cheat_result_timer)
+        if self.state == GameState.CHEAT_MENU:
+            self.dialog.draw_cheat_menu(
+                self.screen, self._get_cheat_list(),
+                self._cheat_menu_selected, self.cheats.used_codes)
 
     def _draw_cheat_input(self):
         from utils.font_helper import get_font
@@ -494,6 +657,9 @@ class GameStateManager:
             self._cheat_result_timer = 2.0
             self.state = GameState.PLAYING
         elif result == "menu":
+            # Auto-save before leaving so progress is not lost
+            save_game(self.player, self.entity_manager.kill_count,
+                      self.entity_manager.boss_index)
             self.state = GameState.MAIN_MENU
             self.menu.set_has_save(os.path.exists(SAVE_FILE))
 
