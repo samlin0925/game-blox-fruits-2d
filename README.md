@@ -12,7 +12,7 @@
 
 ## 遊戲畫面
 
-## ![遊戲執行畫面](doc\screenshots\image.PNG)
+![遊戲執行畫面](doc/screenshots/image.PNG)
 
 ## 快速開始
 
