@@ -4,6 +4,9 @@
 > **授權：MIT License（免費、可分享、可修改）**  
 > **版本：v1.1.0 (2026)**
 
+> ⚠️ **開發中（Early Access）** — 遊戲仍在積極開發，部分功能尚未完善，遇到 BUG 是正常的！  
+> 歡迎回報問題，有你的反饋遊戲才能更好。
+
 一款使用 Python + Pygame 打造的 2D 頂視角動作 RPG，靈感來自惡魔果實冒險題材。  
 低配備、快節奏、高爽感 — 專為課後快樂遊玩設計。
 
@@ -200,3 +203,16 @@ Copyright © 2026 **Sam Lin**
 
 本遊戲為原創非商業教育作品，歡迎校園、課後班自由分享使用。  
 若用於商業用途，請聯絡作者取得授權。
+
+---
+
+## 免責聲明
+
+本遊戲為**粉絲致敬作品**，靈感來自尾田榮一郎老師的漫畫《航海王 ONE PIECE》。
+
+- 遊戲中所有圖形均為程式原創繪製，不含任何官方素材
+- 本遊戲**完全免費、非商業、無任何營利行為**
+- ONE PIECE 及相關名稱、角色設定之著作權歸 **尾田榮一郎 / 集英社 / 東映動畫** 所有
+- 本作品與上述版權方無任何關聯或官方授權
+
+> This is an unofficial fan game. ONE PIECE and all related characters are property of Eiichiro Oda / Shueisha / Toei Animation. No infringement intended.
